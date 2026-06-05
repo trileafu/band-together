@@ -33,18 +33,6 @@ export function generateRoomCode() {
 }
 
 /**
- * Configure WebRTC for low-latency audio.
- */
-function getRtcConfig() {
-  return {
-    iceServers: [
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' },
-    ],
-  }
-}
-
-/**
  * Join or create a room. Trystero handles mesh automatically.
  */
 export function createOrJoinRoom(code, localStream) {
@@ -53,7 +41,6 @@ export function createOrJoinRoom(code, localStream) {
   currentRoom = trysteroJoin(
     { appId: APP_ID, relayRedundancy: 3 },
     roomCode,
-    getRtcConfig()
   )
 
   // Add local audio stream — Trystero sends it to all peers automatically
