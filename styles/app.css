@@ -1,0 +1,402 @@
+/* ── Reset & Base ────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --accent: #58a6ff;
+  --accent-hover: #79c0ff;
+  --danger: #f85149;
+  --green: #3fb950;
+  --yellow: #d29922;
+  --red: #f85149;
+  --radius: 10px;
+}
+
+html, body {
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Screens ─────────────────────────────────── */
+.screen { display: none; min-height: 100vh; }
+.screen.active { display: flex; flex-direction: column; }
+
+/* ── Landing ─────────────────────────────────── */
+#landing {
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 24px;
+}
+
+#landing h1 {
+  font-size: 2.5rem;
+  background: linear-gradient(135deg, var(--accent), #a371f7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.tagline {
+  color: var(--text-muted);
+  text-align: center;
+  max-width: 460px;
+}
+
+/* ── Join Box ─────────────────────────────────── */
+.join-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  width: 100%;
+  max-width: 420px;
+}
+
+.tab-row {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
+}
+
+.tab {
+  flex: 1;
+  padding: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.tab.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+.tab-content p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 16px;
+}
+
+.tab-content label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.tab-content input {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 1.1rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.tab-content input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* ── Buttons ──────────────────────────────────── */
+button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.join-box button:not(.tab) {
+  width: 100%;
+  padding: 12px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+
+.join-box button:not(.tab):hover {
+  background: var(--accent-hover);
+}
+
+.join-box button:not(.tab):disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Settings Panel ───────────────────────────── */
+.settings-panel {
+  width: 100%;
+  max-width: 420px;
+  margin-top: 8px;
+}
+
+.settings-panel summary {
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 8px 0;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 16px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.settings-grid label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.settings-grid select {
+  padding: 6px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+/* ── Session Screen ───────────────────────────── */
+#session {
+  padding: 16px;
+  gap: 16px;
+}
+
+#session header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+#session h2 {
+  font-size: 1.3rem;
+  background: linear-gradient(135deg, var(--accent), #a371f7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+#room-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 12px;
+}
+
+#room-code-display {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 1.1rem;
+  letter-spacing: 2px;
+  color: var(--accent);
+}
+
+#btn-copy-code {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  transition: all 0.15s;
+}
+
+#btn-copy-code:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ── Peers Grid ──────────────────────────────── */
+#peers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+  flex: 1;
+}
+
+.peer-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.peer-card.local {
+  border-color: var(--accent);
+}
+
+.peer-video-wrap {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.peer-video-wrap video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.peer-video-wrap .no-video-label {
+  position: absolute;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.peer-video-wrap video:not([src]):not([srcObject]) + .no-video-label,
+.peer-video-wrap video.hidden + .no-video-label {
+  display: block;
+}
+
+.peer-video-wrap video.hidden {
+  display: none;
+}
+
+.peer-info {
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.peer-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.peer-latency {
+  font-size: 0.75rem;
+  font-family: monospace;
+  margin-left: auto;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--bg);
+}
+
+.peer-latency.good { color: var(--green); }
+.peer-latency.ok { color: var(--yellow); }
+.peer-latency.bad { color: var(--red); }
+
+/* ── Audio Meter ──────────────────────────────── */
+.meter-wrap {
+  flex: 1;
+  height: 6px;
+  background: var(--bg);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.meter-bar {
+  height: 100%;
+  width: 0%;
+  background: var(--green);
+  border-radius: 3px;
+  transition: width 60ms linear, background-color 150ms;
+}
+
+.meter-bar.loud {
+  background: var(--yellow);
+}
+
+.meter-bar.clipping {
+  background: var(--red);
+}
+
+/* ── Controls ─────────────────────────────────── */
+#controls {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 0;
+}
+
+.control-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 0.8rem;
+  transition: all 0.15s;
+  min-width: 72px;
+}
+
+.control-btn .icon {
+  font-size: 1.4rem;
+}
+
+.control-btn:hover {
+  border-color: var(--accent);
+}
+
+.control-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.control-btn.danger:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* ── Stats Bar ────────────────────────────────── */
+#stats-bar {
+  text-align: center;
+  padding: 6px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* ── Mobile ───────────────────────────────────── */
+@media (max-width: 600px) {
+  #landing h1 { font-size: 1.8rem; }
+  .join-box { padding: 16px; }
+  #peers-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .peer-video-wrap { aspect-ratio: 1; }
+  .control-btn { padding: 10px 14px; min-width: 60px; }
+}
+
+@media (max-width: 380px) {
+  #peers-grid { grid-template-columns: 1fr; }
+}

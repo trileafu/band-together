@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BandTogether — Low-Latency P2P Band Practice</title>
+  <link rel="stylesheet" href="/styles/app.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Landing / Join Screen -->
+    <section id="landing" class="screen active">
+      <h1>BandTogether</h1>
+      <p class="tagline">Zero-latency peer-to-peer band practice in your browser. No servers. No installs.</p>
+
+      <div class="join-box">
+        <div class="tab-row">
+          <button class="tab active" data-tab="create">Create Room</button>
+          <button class="tab" data-tab="join">Join Room</button>
+        </div>
+
+        <div id="tab-create" class="tab-content active">
+          <p>Start a new practice room. Share the code with your bandmates.</p>
+          <button id="btn-create">Create Room</button>
+        </div>
+
+        <div id="tab-join" class="tab-content">
+          <label for="input-room-code">Room Code</label>
+          <input id="input-room-code" type="text" placeholder="e.g. ROCK-42" autocomplete="off" spellcheck="false" />
+          <button id="btn-join">Join Room</button>
+        </div>
+      </div>
+
+      <details class="settings-panel">
+        <summary>Audio Settings</summary>
+        <div class="settings-grid">
+          <label for="select-input">Input Device</label>
+          <select id="select-input"></select>
+
+          <label for="select-sample-rate">Sample Rate</label>
+          <select id="select-sample-rate">
+            <option value="48000" selected>48 kHz (recommended)</option>
+            <option value="44100">44.1 kHz</option>
+          </select>
+
+          <label for="select-channels">Channels</label>
+          <select id="select-channels">
+            <option value="1">Mono</option>
+            <option value="2" selected>Stereo</option>
+          </select>
+        </div>
+      </details>
+    </section>
+
+    <!-- Session Screen -->
+    <section id="session" class="screen">
+      <header>
+        <h2>BandTogether</h2>
+        <div id="room-info">
+          <span id="room-code-display"></span>
+          <button id="btn-copy-code" title="Copy room code">Copy</button>
+        </div>
+      </header>
+
+      <div id="peers-grid">
+        <!-- Local user card -->
+        <div class="peer-card local" id="local-card">
+          <div class="peer-video-wrap">
+            <video id="local-video" autoplay muted playsinline></video>
+            <div class="no-video-label">Camera Off</div>
+          </div>
+          <div class="peer-info">
+            <span class="peer-name">You</span>
+            <div class="meter-wrap">
+              <div class="meter-bar" id="local-meter"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Remote peer cards are added dynamically -->
+      </div>
+
+      <div id="controls">
+        <button id="btn-mute" class="control-btn" title="Mute/Unmute">
+          <span class="icon">&#127908;</span>
+          <span class="label">Mute</span>
+        </button>
+        <button id="btn-video" class="control-btn" title="Toggle Video">
+          <span class="icon">&#127909;</span>
+          <span class="label">Video</span>
+        </button>
+        <button id="btn-leave" class="control-btn danger" title="Leave Room">
+          <span class="icon">&#10005;</span>
+          <span class="label">Leave</span>
+        </button>
+      </div>
+
+      <div id="stats-bar">
+        <span id="stats-text"></span>
+      </div>
+    </section>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
