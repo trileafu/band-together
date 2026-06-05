@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BandTogether — Low-Latency P2P Band Practice</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles/app.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Landing / Join Screen -->
+    <section id="landing" class="screen active">
+      <h1>BandTogether</h1>
+      <p class="tagline">Zero-latency peer-to-peer band practice in your browser. No servers. No installs.</p>
+
+      <div class="join-box">
+        <div class="tab-row">
+          <button class="tab active" data-tab="create">Create Room</button>
+          <button class="tab" data-tab="join">Join Room</button>
+        </div>
+
+        <div id="tab-create" class="tab-content active">
+          <p>Start a new practice room. Share the code with your bandmates.</p>
+          <label for="input-name-create">Your Name</label>
+          <input id="input-name-create" type="text" placeholder="e.g. Guitar - Alex" autocomplete="off" maxlength="30" />
+          <button id="btn-create">Create Room</button>
+        </div>
+
+        <div id="tab-join" class="tab-content">
+          <label for="input-name-join">Your Name</label>
+          <input id="input-name-join" type="text" placeholder="e.g. Drums - Sam" autocomplete="off" maxlength="30" />
+          <label for="input-room-code">Room Code</label>
+          <input id="input-room-code" type="text" inputmode="numeric" placeholder="e.g. 482917" autocomplete="off" spellcheck="false" maxlength="6" />
+          <div class="join-mode-row">
+            <label><input type="radio" name="join-mode" value="member" checked /> Member</label>
+            <label><input type="radio" name="join-mode" value="spectator" /> Spectator</label>
+          </div>
+          <button id="btn-join">Join Room</button>
+        </div>
+      </div>
+
+      <details class="settings-panel">
+        <summary>Audio Settings</summary>
+        <div class="settings-grid">
+          <label for="select-input">Input Device</label>
+          <select id="select-input"></select>
+
+          <label for="select-sample-rate">Sample Rate</label>
+          <select id="select-sample-rate">
+            <option value="48000" selected>48 kHz (recommended)</option>
+            <option value="44100">44.1 kHz</option>
+            <option value="96000">96 kHz</option>
+            <option value="192000">192 kHz (max)</option>
+          </select>
+
+          <label for="select-channels">Channels</label>
+          <select id="select-channels">
+            <option value="1">Mono</option>
+            <option value="2" selected>Stereo</option>
+          </select>
+
+          <label for="select-bitrate">Audio Bitrate</label>
+          <select id="select-bitrate">
+            <option value="128000">128 kbps (default)</option>
+            <option value="192000">192 kbps</option>
+            <option value="256000">256 kbps (high)</option>
+            <option value="320000">320 kbps (max)</option>
+          </select>
+        </div>
+      </details>
+    </section>
+
+    <!-- Session Screen (Member) -->
+    <section id="session" class="screen">
+      <header>
+        <h2>BandTogether</h2>
+        <div id="room-info">
+          <span id="room-code-display"></span>
+          <button id="btn-copy-code" title="Copy room code">
+            <span class="btn-icon" id="icon-copy"></span>
+            <span>Copy</span>
+          </button>
+        </div>
+      </header>
+
+      <div id="peers-grid">
+        <!-- Local user card -->
+        <div class="peer-card local" id="local-card">
+          <div class="peer-video-wrap">
+            <video id="local-video" autoplay muted playsinline></video>
+            <div class="no-video-label">
+              <span id="icon-camera-off-local"></span>
+              <span>Camera Off</span>
+            </div>
+          </div>
+          <div class="peer-info">
+            <span class="peer-name" id="local-name">You</span>
+            <div class="meter-wrap">
+              <div class="meter-bar" id="local-meter"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Remote peer cards are added dynamically -->
+      </div>
+
+      <!-- Personal Mixer Panel -->
+      <details id="mixer-panel" class="mixer-panel">
+        <summary><span id="icon-mixer-summary"></span> Mixer</summary>
+        <div id="mixer-sliders"></div>
+      </details>
+
+      <div id="controls">
+        <button id="btn-mute" class="control-btn" title="Mute/Unmute">
+          <span class="icon" id="icon-mic"></span>
+          <span class="label">Mute</span>
+        </button>
+        <button id="btn-video" class="control-btn" title="Toggle Video">
+          <span class="icon" id="icon-video"></span>
+          <span class="label">Video</span>
+        </button>
+        <button id="btn-spectator" class="control-btn" title="Fullscreen View">
+          <span class="icon" id="icon-fullscreen"></span>
+          <span class="label">Fullscreen</span>
+        </button>
+        <button id="btn-leave" class="control-btn danger" title="Leave Room">
+          <span class="icon" id="icon-leave"></span>
+          <span class="label">Leave</span>
+        </button>
+      </div>
+
+      <div id="stats-bar">
+        <span id="stats-text"></span>
+      </div>
+    </section>
+
+    <!-- Spectator / Fullscreen View -->
+    <section id="spectator" class="screen">
+      <div id="spectator-grid">
+        <!-- Peer video/audio tiles injected here, clean with no overlays -->
+      </div>
+      <!-- Floating mixer (hidden by default, toggle with M key) -->
+      <div id="spectator-mixer" class="spectator-mixer hidden">
+        <div class="spectator-mixer-header">
+          <span>Mixer</span>
+          <button id="btn-close-spec-mixer" title="Close">&times;</button>
+        </div>
+        <div id="spectator-mixer-sliders"></div>
+      </div>
+      <!-- Minimal floating exit button (hidden after 3s, reappears on mouse move) -->
+      <button id="btn-exit-spectator" class="spectator-exit" title="Exit Fullscreen View (Esc)">
+        <span id="icon-exit-fullscreen"></span>
+        <span>Exit</span>
+      </button>
+    </section>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
