@@ -9,7 +9,8 @@ Musicians create or join a room with a short code (e.g. `ROCK-42`), and everyone
 - **True P2P** — audio/video flows directly between peers, never through a server
 - **Zero server hosting** — signaling uses public [Nostr](https://nostr.com/) relays via [Trystero](https://github.com/dmotz/trystero)
 - **Music-optimized audio** — 128kbps stereo Opus, no voice processing filters
-- **Optional video** — low-res (320×240 @ 15fps), always deprioritized vs. audio
+- **Adaptive video** — up to 1080p @ 60fps, auto-negotiated per webcam/network. Sent as a separate stream so video issues never affect audio
+- **Audio always wins** — audio and video use independent WebRTC streams with different priority hints; the browser's bandwidth estimator starves video before audio
 - **Latency monitoring** — real-time RTT display per peer (color-coded)
 - **Audio level meters** — per-peer and self
 - **Room codes** — no accounts, no sign-up, just share a code

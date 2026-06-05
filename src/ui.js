@@ -1,5 +1,6 @@
 /**
  * UI helpers — DOM manipulation, peer cards, meters.
+ * Handles separate audio and video streams per peer.
  */
 
 import { getLevel, createRemoteAnalyser } from './audio.js'
@@ -41,42 +42,46 @@ export function removePeerCard(peerId) {
 }
 
 /**
- * Attach an audio stream to a peer card and set up an analyser.
+ * Attach an incoming stream to a peer card.
+ * Since audio and video arrive as separate streams, we detect which
+ * type it is and handle accordingly.
  */
 export function attachStreamToPeer(stream, peerId) {
   const card = document.getElementById(`peer-${peerId}`)
   if (!card) return
 
-  // Create an audio element for playback (not the video element)
-  let audioEl = card.querySelector('audio')
-  if (!audioEl) {
-    audioEl = document.createElement('audio')
-    audioEl.autoplay = true
-    audioEl.playsInline = true
-    card.appendChild(audioEl)
+  const hasAudio = stream.getAudioTracks().length > 0
+  const hasVideo = stream.getVideoTracks().length > 0
+
+  // Handle audio stream
+  if (hasAudio) {
+    let audioEl = card.querySelector('audio')
+    if (!audioEl) {
+      audioEl = document.createElement('audio')
+      audioEl.autoplay = true
+      audioEl.playsInline = true
+      card.appendChild(audioEl)
+    }
+    audioEl.srcObject = stream
+
+    audioEl.play().catch(() => {
+      document.addEventListener('click', () => audioEl.play(), { once: true })
+    })
+
+    try {
+      const analyser = createRemoteAnalyser(stream)
+      remoteAnalysers.set(peerId, analyser)
+    } catch (e) {
+      console.warn('Could not create analyser for peer', peerId, e)
+    }
   }
-  audioEl.srcObject = stream
 
-  // Try to play (handle autoplay policy)
-  audioEl.play().catch(() => {
-    // Will be unblocked on user interaction
-    document.addEventListener('click', () => audioEl.play(), { once: true })
-  })
-
-  // Set up analyser for metering
-  try {
-    const analyser = createRemoteAnalyser(stream)
-    remoteAnalysers.set(peerId, analyser)
-  } catch (e) {
-    console.warn('Could not create analyser for peer', peerId, e)
-  }
-
-  // If stream has video tracks, show them
-  const videoTracks = stream.getVideoTracks()
-  if (videoTracks.length > 0) {
+  // Handle video stream
+  if (hasVideo) {
     const videoEl = card.querySelector('video')
     videoEl.srcObject = stream
     videoEl.classList.remove('hidden')
+    card.querySelector('.no-video-label').style.display = 'none'
   }
 }
 
@@ -90,6 +95,7 @@ export function attachVideoToPeer(track, stream, peerId) {
   const videoEl = card.querySelector('video')
   videoEl.srcObject = stream
   videoEl.classList.remove('hidden')
+  card.querySelector('.no-video-label').style.display = 'none'
 }
 
 /**

@@ -1,0 +1,9 @@
+{
+  "name": "BandTogether",
+  "short_name": "BandTogether",
+  "description": "Low-latency P2P band practice in your browser",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#58a6ff"
+}

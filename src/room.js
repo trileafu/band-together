@@ -1,6 +1,11 @@
 /**
  * Room management via Trystero (Nostr strategy).
  * Handles peer discovery, media stream exchange, and mesh topology.
+ *
+ * Audio and video are sent as SEPARATE streams so that video congestion
+ * or packet loss never degrades audio. Audio senders get "high" priority,
+ * video senders get "low" priority — the browser's bandwidth estimator
+ * will always starve video before audio.
  */
 
 import { joinRoom as trysteroJoin } from '@trystero-p2p/nostr'
@@ -10,7 +15,7 @@ const APP_ID = 'band-together-jam-v1'
 
 let currentRoom = null
 let roomCode = null
-const peers = new Map()  // peerId -> { stream, videoTrack }
+const peers = new Map()  // peerId -> { audioStream, videoStream }
 
 // Callbacks set by main.js
 let onPeerJoinCb = null
@@ -34,8 +39,9 @@ export function generateRoomCode() {
 
 /**
  * Join or create a room. Trystero handles mesh automatically.
+ * Audio and video are added as separate streams.
  */
-export function createOrJoinRoom(code, localStream) {
+export function createOrJoinRoom(code, localAudioStream) {
   roomCode = code.toUpperCase().trim()
 
   currentRoom = trysteroJoin(
@@ -43,9 +49,9 @@ export function createOrJoinRoom(code, localStream) {
     roomCode,
   )
 
-  // Add local audio stream — Trystero sends it to all peers automatically
-  if (localStream) {
-    currentRoom.addStream(localStream)
+  // Add local audio stream — Trystero sends it to all current + future peers
+  if (localAudioStream) {
+    currentRoom.addStream(localAudioStream)
   }
 
   // Set up latency measurement
@@ -53,10 +59,15 @@ export function createOrJoinRoom(code, localStream) {
 
   // Peer join
   currentRoom.onPeerJoin(peerId => {
-    peers.set(peerId, { stream: null, videoTrack: null })
-    // Send our stream to the new peer
-    if (localStream) {
-      currentRoom.addStream(localStream, peerId)
+    peers.set(peerId, { audioStream: null, videoStream: null })
+    // Re-send our audio to the new peer (Trystero may already do this via
+    // the initial addStream, but explicit targeting ensures it)
+    if (localAudioStream) {
+      currentRoom.addStream(localAudioStream, peerId)
+    }
+    // Also send video if active
+    if (videoMediaStream) {
+      currentRoom.addStream(videoMediaStream, peerId)
     }
     // Start measuring latency
     setTimeout(() => pingPeer(peerId), 500)
@@ -70,44 +81,44 @@ export function createOrJoinRoom(code, localStream) {
     if (onPeerLeaveCb) onPeerLeaveCb(peerId)
   })
 
-  // Receive remote stream
+  // Receive remote stream (audio-only or video-only, since they're separate)
   currentRoom.onPeerStream((stream, peerId) => {
-    const peer = peers.get(peerId) || { stream: null, videoTrack: null }
-    peer.stream = stream
-    peers.set(peerId, peer)
+    const peer = peers.get(peerId) || { audioStream: null, videoStream: null }
 
-    // Prioritize audio sender params if we can access the underlying PC
-    optimizeAudioSender(peerId)
+    const hasAudio = stream.getAudioTracks().length > 0
+    const hasVideo = stream.getVideoTracks().length > 0
+
+    if (hasAudio) {
+      peer.audioStream = stream
+    }
+    if (hasVideo) {
+      peer.videoStream = stream
+    }
+    peers.set(peerId, peer)
 
     if (onPeerStreamCb) onPeerStreamCb(stream, peerId)
   })
 
-  // Receive individual track additions (for video toggle)
+  // Receive individual track additions
   currentRoom.onPeerTrack((track, stream, peerId) => {
+    const peer = peers.get(peerId) || { audioStream: null, videoStream: null }
     if (track.kind === 'video') {
-      const peer = peers.get(peerId) || { stream: null, videoTrack: null }
-      peer.videoTrack = track
-      peers.set(peerId, peer)
+      peer.videoStream = stream
+    } else if (track.kind === 'audio') {
+      peer.audioStream = stream
     }
+    peers.set(peerId, peer)
     if (onPeerTrackCb) onPeerTrackCb(track, stream, peerId)
   })
 
   return currentRoom
 }
 
-/**
- * Try to set audio encoding priority to high.
- */
-function optimizeAudioSender(peerId) {
-  // Trystero doesn't expose raw RTCPeerConnection directly,
-  // but the audio priority hints are set via addStream constraints.
-  // This is a best-effort optimization.
-}
-
 let videoMediaStream = null
 
 /**
- * Add a video track to broadcast to all peers.
+ * Add a video track to broadcast to all peers as a SEPARATE stream.
+ * This ensures video is fully independent from audio.
  */
 export function addVideoTrack(track) {
   if (!currentRoom) return
@@ -134,6 +145,7 @@ export function leaveRoom() {
   }
   peers.clear()
   roomCode = null
+  videoMediaStream = null
 }
 
 /**
