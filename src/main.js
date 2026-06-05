@@ -137,8 +137,13 @@ async function joinSession(code) {
     const sampleRate = parseInt($('select-sample-rate')?.value || '48000', 10)
     const channels = parseInt($('select-channels')?.value || '2', 10)
 
-    // Capture audio
-    localStream = await getAudioStream(deviceId, channels, sampleRate)
+    // Capture audio (graceful fallback to listen-only)
+    try {
+      localStream = await getAudioStream(deviceId, channels, sampleRate)
+    } catch (audioErr) {
+      console.warn('No microphone available, joining in listen-only mode:', audioErr.message)
+      localStream = null
+    }
 
     // Register callbacks
     onPeerJoin(handlePeerJoin)
@@ -151,6 +156,11 @@ async function joinSession(code) {
 
     // Update UI
     $('room-code-display').textContent = getRoomCode()
+    if (!localStream) {
+      $('btn-mute').classList.add('active')
+      $('btn-mute').querySelector('.label').textContent = 'No Mic'
+      $('btn-mute').disabled = true
+    }
     showScreen('session')
 
     // Start metering & latency loop
@@ -158,7 +168,7 @@ async function joinSession(code) {
     startPingLoop()
   } catch (err) {
     console.error('Failed to join session:', err)
-    alert(`Could not start: ${err.message}\n\nMake sure you allow microphone access.`)
+    alert(`Could not start: ${err.message}`)
   } finally {
     $('btn-create').disabled = false
     $('btn-join').disabled = false
