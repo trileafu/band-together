@@ -69,7 +69,7 @@ export function createOrJoinRoom(code, localStream) {
     peers.set(peerId, { stream: null, videoTrack: null })
     // Send our stream to the new peer
     if (localStream) {
-      currentRoom.addStream(localStream, null, { target: peerId })
+      currentRoom.addStream(localStream, peerId)
     }
     // Start measuring latency
     setTimeout(() => pingPeer(peerId), 500)
@@ -117,21 +117,24 @@ function optimizeAudioSender(peerId) {
   // This is a best-effort optimization.
 }
 
+let videoMediaStream = null
+
 /**
  * Add a video track to broadcast to all peers.
  */
 export function addVideoTrack(track) {
   if (!currentRoom) return
-  const stream = new MediaStream([track])
-  currentRoom.addStream(stream)
+  videoMediaStream = new MediaStream([track])
+  currentRoom.addStream(videoMediaStream)
 }
 
 /**
  * Remove video from broadcast (stop sending).
  */
-export function removeVideoTrack(track) {
-  if (!currentRoom) return
-  currentRoom.removeStream(track)
+export function removeVideoTrack() {
+  if (!currentRoom || !videoMediaStream) return
+  currentRoom.removeStream(videoMediaStream)
+  videoMediaStream = null
 }
 
 /**
