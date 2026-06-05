@@ -10,7 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@trystero-p2p/nostr": "^0.23.0"
+    "@trystero-p2p/nostr": "^0.23.0",
+    "lucide": "^1.17.0"
   },
   "devDependencies": {
     "vite": "^6.3.5"

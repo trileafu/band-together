@@ -1,6 +1,6 @@
 /**
  * BandTogether — main entry point.
- * Wires up UI, audio, video, and room management.
+ * Wires up UI, audio, video, room management, names, mixer, spectator.
  */
 
 import {
@@ -22,6 +22,9 @@ import {
   onPeerLeave,
   onPeerStream,
   onPeerTrack,
+  onPeerName,
+  onPeerRole,
+  getPeerName,
 } from './room.js'
 import { pingAll } from './latency.js'
 import {
@@ -32,7 +35,10 @@ import {
   attachStreamToPeer,
   attachVideoToPeer,
   updateMeters,
+  updatePeerName,
+  hidePeerCard,
 } from './ui.js'
+import { renderIcons } from './icons.js'
 
 // ── State ────────────────────────────────────────
 let isMuted = false
@@ -40,6 +46,8 @@ let isVideoOn = false
 let localStream = null
 let animFrameId = null
 let pingIntervalId = null
+let isSpectatorMode = false
+let spectatorHideTimeout = null
 
 // ── DOM refs ─────────────────────────────────────
 const $ = id => document.getElementById(id)
@@ -48,11 +56,13 @@ const $ = id => document.getElementById(id)
 document.addEventListener('DOMContentLoaded', () => {
   initTabs()
   populateDevices()
+  renderIcons()
 
   // Create room
   $('btn-create').addEventListener('click', async () => {
     const code = generateRoomCode()
-    await joinSession(code)
+    const name = $('input-name-create').value.trim()
+    await joinSession(code, name, false)
   })
 
   // Join room
@@ -62,7 +72,9 @@ document.addEventListener('DOMContentLoaded', () => {
       $('input-room-code').focus()
       return
     }
-    await joinSession(code)
+    const name = $('input-name-join').value.trim()
+    const mode = document.querySelector('input[name="join-mode"]:checked')?.value
+    await joinSession(code, name, mode === 'spectator')
   })
 
   // Enter key on room code input
@@ -75,8 +87,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const code = getRoomCode()
     if (code) {
       navigator.clipboard.writeText(code).then(() => {
-        $('btn-copy-code').textContent = 'Copied!'
-        setTimeout(() => { $('btn-copy-code').textContent = 'Copy' }, 1500)
+        const label = $('btn-copy-code').querySelector('span:last-child')
+        if (label) label.textContent = 'Copied!'
+        setTimeout(() => { if (label) label.textContent = 'Copy' }, 1500)
       })
     }
   })
@@ -97,13 +110,9 @@ document.addEventListener('DOMContentLoaded', () => {
         isVideoOn = true
         $('btn-video').classList.add('active')
         $('btn-video').querySelector('.label').textContent = 'Stop Video'
-
-        // Show local preview
         const localVideo = $('local-video')
         localVideo.srcObject = new MediaStream([track])
         localVideo.classList.remove('hidden')
-
-        // Send to peers
         addVideoTrack(track)
       }
     } else {
@@ -111,11 +120,46 @@ document.addEventListener('DOMContentLoaded', () => {
       stopVideo()
       $('btn-video').classList.remove('active')
       $('btn-video').querySelector('.label').textContent = 'Video'
-
       const localVideo = $('local-video')
       localVideo.srcObject = null
       localVideo.classList.add('hidden')
     }
+  })
+
+  // Fullscreen view toggle
+  $('btn-spectator').addEventListener('click', () => {
+    enterSpectatorMode()
+  })
+
+  // Exit spectator
+  $('btn-exit-spectator').addEventListener('click', () => {
+    exitSpectatorMode()
+  })
+
+  // Spectator mixer close
+  $('btn-close-spec-mixer').addEventListener('click', () => {
+    $('spectator-mixer').classList.add('hidden')
+  })
+
+  // Keyboard shortcuts in spectator mode
+  document.addEventListener('keydown', e => {
+    if (!isSpectatorMode) return
+    if (e.key === 'Escape') {
+      exitSpectatorMode()
+    } else if (e.key === 'm' || e.key === 'M') {
+      $('spectator-mixer').classList.toggle('hidden')
+    }
+  })
+
+  // Mouse move in spectator — show/hide exit button
+  document.addEventListener('mousemove', () => {
+    if (!isSpectatorMode) return
+    const exitBtn = $('btn-exit-spectator')
+    exitBtn.classList.remove('fade-out')
+    clearTimeout(spectatorHideTimeout)
+    spectatorHideTimeout = setTimeout(() => {
+      exitBtn.classList.add('fade-out')
+    }, 3000)
   })
 
   // Leave
@@ -126,23 +170,24 @@ document.addEventListener('DOMContentLoaded', () => {
 })
 
 // ── Join Session ─────────────────────────────────
-async function joinSession(code) {
-  // Disable buttons during setup
+async function joinSession(code, name, spectator) {
   $('btn-create').disabled = true
   $('btn-join').disabled = true
 
   try {
-    // Get audio settings
     const deviceId = $('select-input')?.value || 'default'
     const sampleRate = parseInt($('select-sample-rate')?.value || '48000', 10)
     const channels = parseInt($('select-channels')?.value || '2', 10)
+    const bitrate = parseInt($('select-bitrate')?.value || '128000', 10)
 
-    // Capture audio (graceful fallback to listen-only)
-    try {
-      localStream = await getAudioStream(deviceId, channels, sampleRate)
-    } catch (audioErr) {
-      console.warn('No microphone available, joining in listen-only mode:', audioErr.message)
-      localStream = null
+    // Spectators don't capture audio
+    if (!spectator) {
+      try {
+        localStream = await getAudioStream(deviceId, channels, sampleRate)
+      } catch (audioErr) {
+        console.warn('No microphone available, joining in listen-only mode:', audioErr.message)
+        localStream = null
+      }
     }
 
     // Register callbacks
@@ -150,20 +195,35 @@ async function joinSession(code) {
     onPeerLeave(handlePeerLeave)
     onPeerStream(handlePeerStream)
     onPeerTrack(handlePeerTrack)
+    onPeerName(handlePeerName)
+    onPeerRole(handlePeerRole)
 
-    // Join the Trystero room
-    createOrJoinRoom(code, localStream)
+    // Join the Trystero room (pass role so peers know if we're spectator)
+    const role = spectator ? 'spectator' : 'member'
+    createOrJoinRoom(code, localStream, name || 'Anonymous', role)
 
     // Update UI
+    const displayName = name || 'You'
+    $('local-name').textContent = displayName
     $('room-code-display').textContent = getRoomCode()
+
     if (!localStream) {
       $('btn-mute').classList.add('active')
-      $('btn-mute').querySelector('.label').textContent = 'No Mic'
+      $('btn-mute').querySelector('.label').textContent = spectator ? 'Spectator' : 'No Mic'
       $('btn-mute').disabled = true
     }
-    showScreen('session')
 
-    // Start metering & latency loop
+    if (spectator) {
+      isSpectatorMode = true
+      $('local-card').style.display = 'none'
+      showScreen('spectator')
+      spectatorHideTimeout = setTimeout(() => {
+        $('btn-exit-spectator').classList.add('fade-out')
+      }, 3000)
+    } else {
+      showScreen('session')
+    }
+
     startAnimationLoop()
     startPingLoop()
   } catch (err) {
@@ -175,9 +235,27 @@ async function joinSession(code) {
   }
 }
 
+// ── Spectator mode ───────────────────────────────
+function enterSpectatorMode() {
+  isSpectatorMode = true
+  showScreen('spectator')
+  spectatorHideTimeout = setTimeout(() => {
+    $('btn-exit-spectator').classList.add('fade-out')
+  }, 3000)
+}
+
+function exitSpectatorMode() {
+  isSpectatorMode = false
+  clearTimeout(spectatorHideTimeout)
+  $('btn-exit-spectator').classList.remove('fade-out')
+  $('spectator-mixer').classList.add('hidden')
+  showScreen('session')
+}
+
 // ── Peer callbacks ───────────────────────────────
 function handlePeerJoin(peerId) {
-  createPeerCard(peerId)
+  const name = getPeerName(peerId)
+  createPeerCard(peerId, name)
   updatePeerCount()
 }
 
@@ -193,6 +271,16 @@ function handlePeerStream(stream, peerId) {
 function handlePeerTrack(track, stream, peerId) {
   if (track.kind === 'video') {
     attachVideoToPeer(track, stream, peerId)
+  }
+}
+
+function handlePeerName(name, peerId) {
+  updatePeerName(peerId, name)
+}
+
+function handlePeerRole(role, peerId) {
+  if (role === 'spectator') {
+    hidePeerCard(peerId)
   }
 }
 
@@ -233,6 +321,8 @@ function cleanup() {
     clearInterval(pingIntervalId)
     pingIntervalId = null
   }
+  clearTimeout(spectatorHideTimeout)
+  isSpectatorMode = false
   leaveRoom()
   stopAudio()
   stopVideo()
@@ -243,22 +333,31 @@ function cleanup() {
   // Reset UI
   $('btn-mute').classList.remove('active')
   $('btn-mute').querySelector('.label').textContent = 'Mute'
+  $('btn-mute').disabled = false
   $('btn-video').classList.remove('active')
   $('btn-video').querySelector('.label').textContent = 'Video'
   $('local-video').srcObject = null
   $('local-video').classList.add('hidden')
+  $('local-card').style.display = ''
 
   // Remove all peer cards
   const grid = $('peers-grid')
   for (const card of [...grid.querySelectorAll('.peer-card:not(.local)')]) {
     card.remove()
   }
+  // Clear spectator grid
+  const specGrid = $('spectator-grid')
+  if (specGrid) specGrid.innerHTML = ''
+  // Clear mixer sliders
+  const mixerSliders = $('mixer-sliders')
+  if (mixerSliders) mixerSliders.innerHTML = ''
+  const specMixerSliders = $('spectator-mixer-sliders')
+  if (specMixerSliders) specMixerSliders.innerHTML = ''
 }
 
 // ── Populate audio device list ───────────────────
 async function populateDevices() {
   try {
-    // Request permission first to get labeled devices
     await navigator.mediaDevices.getUserMedia({ audio: true }).then(s => {
       s.getTracks().forEach(t => t.stop())
     })
